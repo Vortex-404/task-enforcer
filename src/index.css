@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Military-grade color palette */
+    /* Military-grade color palette (CEO Mode) */
     --background: 210 15% 5%;
     --foreground: 0 0% 95%;
 
@@ -59,6 +59,80 @@ All colors MUST be HSL.
     
     /* Animation timing */
     --transition-military: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  /* Casual Mode Theme */
+  [data-mode="casual"] {
+    /* Warm, friendly color palette */
+    --background: 350 20% 98%;
+    --foreground: 240 10% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 15%;
+
+    /* Soft pink/purple accent system */
+    --primary: 320 65% 60%;
+    --primary-foreground: 0 0% 98%;
+    --primary-glow: 280 65% 65%;
+
+    --secondary: 210 15% 95%;
+    --secondary-foreground: 240 10% 15%;
+
+    --muted: 210 15% 96%;
+    --muted-foreground: 240 10% 45%;
+
+    --accent: 280 70% 70%;
+    --accent-foreground: 240 10% 15%;
+
+    /* Alert states - softer versions */
+    --destructive: 0 70% 65%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --success: 150 60% 50%;
+    --success-foreground: 0 0% 98%;
+
+    --warning: 35 80% 60%;
+    --warning-foreground: 240 10% 15%;
+
+    --border: 220 15% 85%;
+    --input: 210 15% 97%;
+    --ring: 320 65% 60%;
+
+    /* Gentle gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-elite: linear-gradient(135deg, hsl(280 65% 60%), hsl(320 65% 65%));
+    --gradient-danger: linear-gradient(135deg, hsl(0 70% 60%), hsl(0 70% 70%));
+    
+    /* Soft shadows */
+    --shadow-elite: 0 0 30px hsl(var(--primary) / 0.2);
+    --shadow-intense: 0 4px 20px hsl(320 20% 50% / 0.15);
+    
+    /* Smooth animation timing */
+    --transition-military: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Dark mode for casual */
+  [data-mode="casual"].dark {
+    --background: 240 15% 8%;
+    --foreground: 0 0% 95%;
+
+    --card: 240 15% 10%;
+    --card-foreground: 0 0% 92%;
+
+    --primary: 320 65% 65%;
+    --primary-glow: 280 65% 70%;
+
+    --secondary: 240 15% 15%;
+    --secondary-foreground: 0 0% 85%;
+
+    --muted: 240 15% 12%;
+    --muted-foreground: 240 10% 55%;
+
+    --border: 240 15% 18%;
+    --input: 240 15% 15%;
   }
 }
 
