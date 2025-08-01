@@ -177,7 +177,10 @@ const Index = () => {
                 />
               ) : (
                 <CasualTaskCreator
-                  onCreateTask={handleCreateTask}
+                  onCreateTask={(task) => {
+                    console.log('Task created:', task);
+                    setShowTaskCreator(false);
+                  }}
                   onCancel={() => setShowTaskCreator(false)}
                 />
               )

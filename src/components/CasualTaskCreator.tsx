@@ -8,6 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Clock, Heart, Sparkles } from "lucide-react";
 import { Task, Priority, StrictnessLevel } from "@/types";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://pdrpkbtfphqwtvbaluhb.supabase.co', // Supabase URL
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcnBrYnRmcGhxd3R2YmFsdWhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMDcwNDcsImV4cCI6MjA2OTU4MzA0N30.oobW5fHwLyM10PKUvPMqdA-v42_6G9buoCT0K5jdogU' // API Key
+);
 
 interface CasualTaskCreatorProps {
   onCreateTask: (task: Omit<Task, 'id' | 'createdAt' | 'focusSessions'>) => void;
@@ -59,9 +65,9 @@ const CasualTaskCreator = ({ onCreateTask, onCancel }: CasualTaskCreatorProps) =
     tags: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const task = {
       title: formData.title,
       description: formData.description,
@@ -73,6 +79,14 @@ const CasualTaskCreator = ({ onCreateTask, onCancel }: CasualTaskCreatorProps) =
       tags: formData.tags.split(",").map(tag => tag.trim()).filter(Boolean)
     };
 
+    const { data, error } = await supabase.from('tasks').insert([task]);
+
+    if (error) {
+      console.error('Error creating task:', error);
+      return;
+    }
+
+    console.log('Task created successfully:', data);
     onCreateTask(task);
   };
 
