@@ -8,6 +8,8 @@ import Dashboard from "@/components/Dashboard";
 import TaskList from "@/components/TaskList";
 import TaskCreator from "@/components/TaskCreator";
 import CasualTaskCreator from "@/components/CasualTaskCreator";
+import EnhancedTaskCreator from "@/components/EnhancedTaskCreator";
+import AIValidationDialog from "@/components/AIValidationDialog";
 import FocusMode from "@/components/FocusMode";
 import CalendarView from "@/components/CalendarView";
 import ModeToggle from "@/components/ModeToggle";
@@ -33,6 +35,9 @@ const Index = () => {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
   const [showChat, setShowChat] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(true);
+  const [showValidation, setShowValidation] = useState(false);
+  const [validationType, setValidationType] = useState<'completion' | 'streak'>('completion');
+  const [validationTaskTitle, setValidationTaskTitle] = useState('');
 
   const stats = getTaskStats();
   const completedToday = tasks.filter(t => 
@@ -171,16 +176,13 @@ const Index = () => {
           <TabsContent value={isCeoMode ? "missions" : "tasks"} className="space-y-6">
             {showTaskCreator ? (
               isCeoMode ? (
-                <TaskCreator
+                <EnhancedTaskCreator
                   onCreateTask={handleCreateTask}
                   onCancel={() => setShowTaskCreator(false)}
                 />
               ) : (
                 <CasualTaskCreator
-                  onCreateTask={(task) => {
-                    console.log('Task created:', task);
-                    setShowTaskCreator(false);
-                  }}
+                  onCreateTask={handleCreateTask}
                   onCancel={() => setShowTaskCreator(false)}
                 />
               )
@@ -217,6 +219,18 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* AI Validation Dialog */}
+      <AIValidationDialog
+        open={showValidation}
+        onClose={() => setShowValidation(false)}
+        type={validationType}
+        taskTitle={validationTaskTitle}
+        onValidated={(result) => {
+          console.log('AI Validation Result:', result);
+          setShowValidation(false);
+        }}
+      />
 
       {/* AI Chatbot */}
       {showChat && (

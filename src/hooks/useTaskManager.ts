@@ -1,111 +1,137 @@
 import { useState, useEffect } from "react";
 import { Task, FocusSession, TaskStatus } from "@/types";
+import { db } from "@/lib/database";
+import AIValidation from "@/lib/ai";
 
 export const useTaskManager = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeFocusTask, setActiveFocusTask] = useState<Task | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load tasks from localStorage on mount
+  // Load tasks from IndexedDB on mount
   useEffect(() => {
-    const savedTasks = localStorage.getItem('strictfocus-tasks');
-    if (savedTasks) {
-      try {
-        const parsedTasks = JSON.parse(savedTasks).map((task: any) => ({
-          ...task,
-          deadline: new Date(task.deadline),
-          createdAt: new Date(task.createdAt),
-          startedAt: task.startedAt ? new Date(task.startedAt) : undefined,
-          completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
-          focusSessions: task.focusSessions.map((session: any) => ({
-            ...session,
-            startTime: new Date(session.startTime),
-            endTime: session.endTime ? new Date(session.endTime) : undefined
-          }))
-        }));
-        setTasks(parsedTasks);
-      } catch (error) {
-        console.error('Failed to load tasks from localStorage:', error);
-      }
-    }
+    loadTasks();
   }, []);
 
-  // Save tasks to localStorage whenever tasks change
-  useEffect(() => {
-    localStorage.setItem('strictfocus-tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const createTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'focusSessions'>) => {
-    const newTask: Task = {
-      ...taskData,
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-      focusSessions: []
-    };
-
-    setTasks(prev => [newTask, ...prev]);
-    return newTask;
+  const loadTasks = async () => {
+    try {
+      setIsLoading(true);
+      const dbTasks = await db.getAllTasks();
+      setTasks(dbTasks);
+    } catch (error) {
+      console.error('Failed to load tasks from database:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateTaskStatus = (taskId: string, status: TaskStatus) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id === taskId) {
-        const updates: Partial<Task> = { status };
-        
-        if (status === 'in_progress' && !task.startedAt) {
-          updates.startedAt = new Date();
-        } else if (status === 'completed') {
-          updates.completedAt = new Date();
-        }
-        
-        return { ...task, ...updates };
+  const createTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'focusSessions'>) => {
+    try {
+      const newTask = await db.createTask(taskData);
+      setTasks(prev => [newTask, ...prev]);
+      
+      // Update focus streak if applicable
+      if (taskData.priority === 'critical' || taskData.priority === 'high') {
+        await db.updateStreak('focus', true);
       }
-      return task;
-    }));
+      
+      return newTask;
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      throw error;
+    }
   };
 
-  const startFocusSession = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    // Update task status to in_progress
-    updateTaskStatus(taskId, 'in_progress');
-    
-    // Set as active focus task
-    setActiveFocusTask(task);
+  const updateTaskStatus = async (taskId: string, status: TaskStatus, aiValidated: boolean = false) => {
+    try {
+      const updates: Partial<Task> = { status };
+      
+      if (status === 'in_progress' && !tasks.find(t => t.id === taskId)?.startedAt) {
+        updates.startedAt = new Date();
+      } else if (status === 'completed') {
+        updates.completedAt = new Date();
+        
+        // Update completion streak
+        await db.updateStreak('completion', true);
+        
+        // If AI validated, also update consistency streak
+        if (aiValidated) {
+          await db.updateStreak('consistency', true);
+        }
+      }
+      
+      await db.updateTask(taskId, updates);
+      
+      setTasks(prev => prev.map(task => {
+        if (task.id === taskId) {
+          return { ...task, ...updates };
+        }
+        return task;
+      }));
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+      throw error;
+    }
   };
 
-  const endFocusSession = (taskId: string, completed: boolean = false) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
+  const startFocusSession = async (taskId: string) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
 
-    const newSession: FocusSession = {
-      id: crypto.randomUUID(),
-      taskId,
-      startTime: new Date(Date.now() - 30000), // Mock 30 seconds ago
-      endTime: new Date(),
-      duration: 0.5, // Mock duration
-      distractionAttempts: 0,
-      aiInterventions: [],
-      completed
-    };
-
-    setTasks(prev => prev.map(t => 
-      t.id === taskId 
-        ? { 
-            ...t, 
-            focusSessions: [...t.focusSessions, newSession],
-            status: completed ? 'completed' : 'pending'
-          }
-        : t
-    ));
-
-    setActiveFocusTask(null);
+      // Update task status to in_progress
+      await updateTaskStatus(taskId, 'in_progress');
+      
+      // Set as active focus task
+      setActiveFocusTask(task);
+    } catch (error) {
+      console.error('Failed to start focus session:', error);
+    }
   };
 
-  const deleteTask = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
-    if (activeFocusTask?.id === taskId) {
+  const endFocusSession = async (taskId: string, completed: boolean = false, sessionData?: Partial<FocusSession>) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const duration = sessionData?.duration || 30; // Default 30 minutes
+      const newSession = await db.createFocusSession({
+        taskId,
+        startTime: new Date(Date.now() - (duration * 60 * 1000)),
+        endTime: new Date(),
+        duration,
+        distractionAttempts: sessionData?.distractionAttempts || 0,
+        completed
+      });
+
+      setTasks(prev => prev.map(t => 
+        t.id === taskId 
+          ? { 
+              ...t, 
+              focusSessions: [...t.focusSessions, newSession],
+              status: completed ? 'completed' : 'pending'
+            }
+          : t
+      ));
+
+      // Update focus streak
+      await db.updateStreak('focus', true);
+
       setActiveFocusTask(null);
+    } catch (error) {
+      console.error('Failed to end focus session:', error);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await db.tasks.delete(taskId);
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      if (activeFocusTask?.id === taskId) {
+        setActiveFocusTask(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete task:', error);
     }
   };
 
@@ -133,14 +159,36 @@ export const useTaskManager = () => {
     };
   };
 
+  // AI validation functions
+  const validateTaskCompletion = async (taskId: string, answers: Record<string, string>) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const result = await AIValidation.validateTaskCompletion(task.title, answers);
+    
+    if (result.validated) {
+      await updateTaskStatus(taskId, 'completed', true);
+    }
+    
+    return result;
+  };
+
+  const validateStreak = async (streakType: 'focus' | 'completion' | 'consistency', answers: Record<string, string>) => {
+    return await AIValidation.validateStreak(streakType, answers);
+  };
+
   return {
     tasks,
     activeFocusTask,
+    isLoading,
     createTask,
     updateTaskStatus,
     startFocusSession,
     endFocusSession,
     deleteTask,
-    getTaskStats
+    getTaskStats,
+    validateTaskCompletion,
+    validateStreak,
+    loadTasks
   };
 };
