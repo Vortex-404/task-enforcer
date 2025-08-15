@@ -1,3 +1,45 @@
+// NOTE: Do NOT commit API keys into source code. The previous implementation
+// contained an embedded OpenRouter/OpenAI API key which is a security risk.
+//
+// This helper will attempt to call a backend endpoint you provide at
+// `/api/openrouter` (recommended) which should forward requests to
+// OpenRouter/OpenAI with the secret API key stored server-side. If you do
+// not have a backend ready, this component will gracefully fall back to the
+// built-in simulated responses below.
+//
+// To wire a backend quickly, create a server route that accepts JSON
+// { model, messages } and forwards it to `https://openrouter.ai/api/v1/chat/completions`
+// with an Authorization: Bearer <YOUR_SECRET_KEY> header, then return the
+// JSON response. Keep secrets server-side; don't expose them as VITE_* vars.
+
+const callOpenRouter = async (userMessage: string) => {
+  try {
+    // Example client-side proxy call to your backend. This avoids embedding
+    // secrets into the browser bundle. Replace the path if your server uses
+    // a different route or hostname.
+    const res = await fetch('/api/openrouter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-chat-v3-0324:free',
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`OpenRouter proxy error: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    // Attempt to read the standard chat completion shape
+    return data?.choices?.[0]?.message?.content ?? JSON.stringify(data);
+  } catch (err) {
+    // If there's any error (no backend, CORS, network), bubble it up so the
+    // caller can fallback to the simulated responses.
+    throw err;
+  }
+};
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,19 +198,35 @@ const ChatBot = ({ isCeoMode, isMinimized, onToggleMinimize, onClose }: ChatBotP
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsTyping(true);
-
-    // Simulate AI thinking time
-    setTimeout(() => {
+    // Try to call backend OpenRouter proxy. If it fails, fall back to the
+    // built-in simulated responses so the UI still works offline.
+    try {
+      const reply = await callOpenRouter(inputValue);
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: getAIResponse(inputValue),
+        content: typeof reply === 'string' ? reply : JSON.stringify(reply),
         timestamp: new Date()
       };
-
       setMessages(prev => [...prev, botResponse]);
+    } catch (err) {
+      // If the network call fails, simulate a response with a small delay to
+      // make UX feel natural.
+      setTimeout(() => {
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'bot',
+          content: getAIResponse(inputValue),
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, botResponse]);
+        setIsTyping(false);
+      }, 900);
+      return;
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
