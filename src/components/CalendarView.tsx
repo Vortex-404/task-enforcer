@@ -6,12 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
 import { format, isSameDay } from "date-fns";
 import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  'https://pdrpkbtfphqwtvbaluhb.supabase.co',
-  'REDACTED_FOR_SAFETY' // keep keys out of changes; restore from env in real app
-);
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -152,7 +146,9 @@ const CalendarView = ({ tasks, onDateSelect, onCreateTask }: CalendarViewProps) 
             <Button
               size="sm"
               onClick={() => onCreateTask(selectedDate)}
-              className="bg-gradient-to-r from-primary to-primary-glow"
+              className="deploy-btn"
+              // data-redirect can be toggled by parent when redirect will occur
+              data-redirect="true"
             >
               <Plus className="h-3 w-3 mr-1" />
               Add Task

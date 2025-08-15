@@ -2,7 +2,7 @@ import React from "react";
 import clsx from "clsx";
 
 export const Tabs = ({ children, className = "" }: React.HTMLAttributes<HTMLDivElement>) => {
-  return <div className={clsx("rounded-xl bg-transparent p-1", className)}>{children}</div>;
+  return <div className={clsx("tabs", className)}>{children}</div>;
 };
 
 export const TabsList = ({ children, className = "" }: React.HTMLAttributes<HTMLDivElement>) => {
@@ -14,11 +14,10 @@ export const Tab = ({ children, active = false, className = "", ...props }: any)
     <button
       {...props}
       className={clsx(
-        "px-3 py-2 rounded-lg text-sm font-medium",
-        active
-          ? "bg-primary text-primary-foreground shadow-elite hover:scale-[1.01]"
-          : "text-muted hover:bg-glass"
-      , className)}
+        "tab",
+        active ? "tab--active" : "",
+        className
+      )}
     >
       {children}
     </button>

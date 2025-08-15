@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Calendar as CalendarIcon, MessageCircle } from "lucide-react";
@@ -22,7 +22,7 @@ import { toast } from "@/hooks/use-toast";
 // Minimal toast implementation for immediate feedback
 type Toast = { id: string; title: string; message?: string; tone?: "success" | "info" | "celebrate" };
 
-const Index = () => {
+export default function IndexPage() {
   const {
     tasks,
     activeFocusTask,
@@ -45,21 +45,18 @@ const Index = () => {
   const [mode, setMode] = useState<"ceo" | "casual">("casual");
   const [tab, setTab] = useState<"missions" | "tasks" | "overview">("missions");
   const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const stats = getTaskStats();
-  const completedToday = tasks.filter(t => 
-    t.status === 'completed' && isSameDay(t.completedAt || new Date(), new Date())
-  ).length;
-
-  // Apply theme based on mode
-  useEffect(() => {
-    const root = document.documentElement;
-    if (isCeoMode) {
-      root.removeAttribute('data-mode');
-    } else {
-      root.setAttribute('data-mode', 'casual');
+  const [tasks, setTasks] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem("sf_tasks");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
     }
-  }, [isCeoMode]);
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("sf_tasks", JSON.stringify(tasks)); } catch {}
+  }, [tasks]);
 
   const pushToast = useCallback((t: Omit<Toast, "id">, ttl = 3500) => {
     const id = Date.now().toString();
@@ -67,53 +64,50 @@ const Index = () => {
     setTimeout(() => setToasts((s) => s.filter(x => x.id !== id)), ttl);
   }, []);
 
-  const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'focusSessions'>) => {
-    createTask(taskData);
-    setShowTaskCreator(false);
-    setCurrentTab(isCeoMode ? "missions" : "tasks");
-    
-    // Show success feedback
+  const handleCreateTask = async (date: Date) => {
+    // Immediately create local task, show toast, mark saved locally and redirect/shows deploy area.
+    const newTask = {
+      id: Date.now().toString(),
+      title: `Mission ${tasks.length + 1}`,
+      deadline: date,
+      priority: "normal",
+      status: "pending",
+      estimatedDuration: 30,
+      strictnessLevel: "standard",
+    };
+    setTasks(prev => [newTask, ...prev]);
     pushToast({
-      title: isCeoMode ? "Mission Deployed" : "Task Added",
-      message: isCeoMode ? "Mission deployed — team notified." : "Task created locally.",
+      title: mode === "ceo" ? "Mission Deployed (local)" : "Task Added",
+      message: mode === "ceo" ? "Mission staged locally — ready to deploy." : "Task saved locally.",
       tone: "success",
     }, 2500);
+
+    // Simulate redirect to /deploy or switch tab — prefer client route when available
+    try {
+      // If using Next/router uncomment and use router.push('/deploy')
+      // router.push('/deploy');
+      // fallback: set a flag that CalendarView reads (not implemented here), or open deploy page
+      window.location.href = "/deploy";
+    } catch {
+      /* no-op if not available */
+    }
   };
 
-  const handleCreateTaskForDate = (date: Date) => {
-    setSelectedCalendarDate(date);
-    setShowTaskCreator(true);
-    setCurrentTab(isCeoMode ? "missions" : "tasks");
-  };
-
-  const handleDateSelect = (date: Date) => {
-    setSelectedCalendarDate(date);
-  };
-
-  const handleStartTask = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    startFocusSession(taskId);
-    
-    // Show start feedback
+  const handleStartFocus = (taskId: string) => {
     pushToast({
       title: mode === "ceo" ? "Focus Mode: Go" : "Focus Mode",
       message: mode === "ceo" ? "Maintain radio silence. Execute." : "Session started. Good luck!",
       tone: "info",
     }, 3000);
-    setTab("overview");
   };
 
   const handleCompleteTask = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    updateTaskStatus(taskId, 'completed');
-    endFocusSession(taskId, true);
-    
-    // Show completion feedback
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: "completed" } : t));
     pushToast({
       title: mode === "ceo" ? "Mission Complete" : "Nice Work",
       message: mode === "ceo" ? "Well executed." : "Task completed — celebrate!",
       tone: "celebrate",
-    }, 4000);
+    }, 3500);
   };
 
   const handleAbandonTask = () => {
@@ -139,7 +133,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground p-6" data-mode={mode}>
       {/* Dynamic Header based on mode */}
       {isCeoMode ? (
         <Header 
@@ -280,20 +274,19 @@ const Index = () => {
       )}
 
       {/* toast container */}
-      <div className="toast-container">
+      <div className="toast-container" aria-live="polite">
         {toasts.map(t => (
-          <div key={t.id} className="rounded-lg px-4 py-2 bg-foreground/95 text-primary-foreground shadow-elite-strong animate-floatUp">
-            <div className="flex items-start gap-3">
-              <div>
-                <div className="text-sm font-semibold">{t.title}</div>
-                {t.message && <div className="text-xs text-primary-foreground/90">{t.message}</div>}
-              </div>
+          <div key={t.id} className={`toast ${t.tone === "success" ? "toast--success" : t.tone === "celebrate" ? "toast--celebrate" : "toast--info"}`}>
+            <div>
+              <div className="toast__title">{t.title}</div>
+              {t.message && <div className="toast__msg">{t.message}</div>}
             </div>
+            <button className="toast__close" onClick={() => setToasts(s => s.filter(x => x.id !== t.id))}>✕</button>
           </div>
         ))}
       </div>
     </div>
   );
-};
-
+}
+          
 export default Index;

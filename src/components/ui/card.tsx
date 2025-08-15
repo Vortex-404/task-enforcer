@@ -1,7 +1,5 @@
 import React from "react"
 
-import { cn } from "@/lib/utils"
-
 export const Card = ({
   children,
   className = "",
@@ -10,7 +8,7 @@ export const Card = ({
   return (
     <div
       {...props}
-      className={`panel-glass rounded-2xl p-0 overflow-hidden shadow-elite ${className}`}
+      className={`card ${className}`}
     >
       {children}
     </div>
@@ -23,10 +21,7 @@ export const CardHeader = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => {
   return (
-    <div
-      {...props}
-      className={`px-4 py-3 border-b border-border ${className}`}
-    >
+    <div {...props} className={`card__header ${className}`}>
       {children}
     </div>
   )
@@ -38,7 +33,7 @@ export const CardContent = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => {
   return (
-    <div {...props} className={`px-4 py-4 ${className}`}>
+    <div {...props} className={`${className}`}>
       {children}
     </div>
   )
@@ -50,8 +45,12 @@ export const CardTitle = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => {
   return (
-    <div {...props} className={`font-semibold text-sm ${className}`}>
+    <div {...props} className={`card__title ${className}`}>
       {children}
     </div>
   )
 }
+    <div {...props} className={`font-semibold text-sm ${className}`}>
+      {children}
+    </div>
+

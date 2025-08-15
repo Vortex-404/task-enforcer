@@ -2,7 +2,7 @@ import React from "react";
 import clsx from "clsx";
 
 type BadgeProps = React.HTMLAttributes<HTMLDivElement> & {
-  variant?: "default" | "outline" | "secondary";
+  variant?: "default" | "outline" | "secondary" | "primary";
 };
 
 export const Badge: React.FC<BadgeProps> = ({
@@ -17,6 +17,7 @@ export const Badge: React.FC<BadgeProps> = ({
     outline:
       "border border-border text-muted px-2 py-0.5 text-xs bg-transparent",
     secondary: "bg-glass text-muted px-2 py-0.5 text-xs",
+    primary: "bg-primary text-primary-foreground px-2 py-0.5 text-xs",
   };
 
   return (
