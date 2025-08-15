@@ -17,6 +17,7 @@ import ChatBot from "@/components/ChatBot";
 import { useTaskManager } from "@/hooks/useTaskManager";
 import { Task } from "@/types";
 import { isSameDay } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const {
@@ -58,6 +59,13 @@ const Index = () => {
     createTask(taskData);
     setShowTaskCreator(false);
     setCurrentTab(isCeoMode ? "missions" : "tasks");
+    
+    // Show success feedback
+    toast({
+      title: isCeoMode ? "Mission Deployed" : "Task Created",
+      description: `${taskData.title} has been added to your ${isCeoMode ? 'mission queue' : 'task list'}.`,
+      duration: 3000,
+    });
   };
 
   const handleCreateTaskForDate = (date: Date) => {
@@ -71,12 +79,28 @@ const Index = () => {
   };
 
   const handleStartTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
     startFocusSession(taskId);
+    
+    // Show start feedback
+    toast({
+      title: "Focus Session Started",
+      description: `Entering deep focus mode for: ${task?.title || 'Task'}`,
+      duration: 2000,
+    });
   };
 
   const handleCompleteTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
     updateTaskStatus(taskId, 'completed');
     endFocusSession(taskId, true);
+    
+    // Show completion feedback
+    toast({
+      title: isCeoMode ? "Mission Accomplished" : "Task Completed",
+      description: `${task?.title || 'Task'} has been marked as complete. Great work!`,
+      duration: 3000,
+    });
   };
 
   const handleAbandonTask = () => {
