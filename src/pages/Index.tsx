@@ -8,6 +8,8 @@ import Dashboard from "@/components/Dashboard";
 import TaskList from "@/components/TaskList";
 import TaskCreator from "@/components/TaskCreator";
 import CasualTaskCreator from "@/components/CasualTaskCreator";
+import EnhancedTaskCreator from "@/components/EnhancedTaskCreator";
+import AIValidationDialog from "@/components/AIValidationDialog";
 import FocusMode from "@/components/FocusMode";
 import CalendarView from "@/components/CalendarView";
 import ModeToggle from "@/components/ModeToggle";
@@ -15,6 +17,7 @@ import ChatBot from "@/components/ChatBot";
 import { useTaskManager } from "@/hooks/useTaskManager";
 import { Task } from "@/types";
 import { isSameDay } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const {
@@ -33,6 +36,9 @@ const Index = () => {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
   const [showChat, setShowChat] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(true);
+  const [showValidation, setShowValidation] = useState(false);
+  const [validationType, setValidationType] = useState<'completion' | 'streak'>('completion');
+  const [validationTaskTitle, setValidationTaskTitle] = useState('');
 
   const stats = getTaskStats();
   const completedToday = tasks.filter(t => 
@@ -53,6 +59,13 @@ const Index = () => {
     createTask(taskData);
     setShowTaskCreator(false);
     setCurrentTab(isCeoMode ? "missions" : "tasks");
+    
+    // Show success feedback
+    toast({
+      title: isCeoMode ? "Mission Deployed" : "Task Created",
+      description: `${taskData.title} has been added to your ${isCeoMode ? 'mission queue' : 'task list'}.`,
+      duration: 3000,
+    });
   };
 
   const handleCreateTaskForDate = (date: Date) => {
@@ -66,12 +79,28 @@ const Index = () => {
   };
 
   const handleStartTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
     startFocusSession(taskId);
+    
+    // Show start feedback
+    toast({
+      title: "Focus Session Started",
+      description: `Entering deep focus mode for: ${task?.title || 'Task'}`,
+      duration: 2000,
+    });
   };
 
   const handleCompleteTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
     updateTaskStatus(taskId, 'completed');
     endFocusSession(taskId, true);
+    
+    // Show completion feedback
+    toast({
+      title: isCeoMode ? "Mission Accomplished" : "Task Completed",
+      description: `${task?.title || 'Task'} has been marked as complete. Great work!`,
+      duration: 3000,
+    });
   };
 
   const handleAbandonTask = () => {
@@ -171,7 +200,7 @@ const Index = () => {
           <TabsContent value={isCeoMode ? "missions" : "tasks"} className="space-y-6">
             {showTaskCreator ? (
               isCeoMode ? (
-                <TaskCreator
+                <EnhancedTaskCreator
                   onCreateTask={handleCreateTask}
                   onCancel={() => setShowTaskCreator(false)}
                 />
@@ -214,6 +243,18 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* AI Validation Dialog */}
+      <AIValidationDialog
+        open={showValidation}
+        onClose={() => setShowValidation(false)}
+        type={validationType}
+        taskTitle={validationTaskTitle}
+        onValidated={(result) => {
+          console.log('AI Validation Result:', result);
+          setShowValidation(false);
+        }}
+      />
 
       {/* AI Chatbot */}
       {showChat && (

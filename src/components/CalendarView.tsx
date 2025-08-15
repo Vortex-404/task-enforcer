@@ -6,6 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
 import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://pdrpkbtfphqwtvbaluhb.supabase.co', // Supabase URL
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcnBrYnRmcGhxd3R2YmFsdWhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMDcwNDcsImV4cCI6MjA2OTU4MzA0N30.oobW5fHwLyM10PKUvPMqdA-v42_6G9buoCT0K5jdogU' // API Key
+);
 
 interface CalendarViewProps {
   tasks: Task[];
