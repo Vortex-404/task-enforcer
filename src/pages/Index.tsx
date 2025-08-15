@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Calendar as CalendarIcon, MessageCircle } from "lucide-react";
@@ -18,6 +18,9 @@ import { useTaskManager } from "@/hooks/useTaskManager";
 import { Task } from "@/types";
 import { isSameDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+
+// Minimal toast implementation for immediate feedback
+type Toast = { id: string; title: string; message?: string; tone?: "success" | "info" | "celebrate" };
 
 const Index = () => {
   const {
@@ -39,6 +42,9 @@ const Index = () => {
   const [showValidation, setShowValidation] = useState(false);
   const [validationType, setValidationType] = useState<'completion' | 'streak'>('completion');
   const [validationTaskTitle, setValidationTaskTitle] = useState('');
+  const [mode, setMode] = useState<"ceo" | "casual">("casual");
+  const [tab, setTab] = useState<"missions" | "tasks" | "overview">("missions");
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const stats = getTaskStats();
   const completedToday = tasks.filter(t => 
@@ -55,17 +61,23 @@ const Index = () => {
     }
   }, [isCeoMode]);
 
+  const pushToast = useCallback((t: Omit<Toast, "id">, ttl = 3500) => {
+    const id = Date.now().toString();
+    setToasts((s) => [...s, { id, ...t }]);
+    setTimeout(() => setToasts((s) => s.filter(x => x.id !== id)), ttl);
+  }, []);
+
   const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'focusSessions'>) => {
     createTask(taskData);
     setShowTaskCreator(false);
     setCurrentTab(isCeoMode ? "missions" : "tasks");
     
     // Show success feedback
-    toast({
-      title: isCeoMode ? "Mission Deployed" : "Task Created",
-      description: `${taskData.title} has been added to your ${isCeoMode ? 'mission queue' : 'task list'}.`,
-      duration: 3000,
-    });
+    pushToast({
+      title: isCeoMode ? "Mission Deployed" : "Task Added",
+      message: isCeoMode ? "Mission deployed — team notified." : "Task created locally.",
+      tone: "success",
+    }, 2500);
   };
 
   const handleCreateTaskForDate = (date: Date) => {
@@ -83,11 +95,12 @@ const Index = () => {
     startFocusSession(taskId);
     
     // Show start feedback
-    toast({
-      title: "Focus Session Started",
-      description: `Entering deep focus mode for: ${task?.title || 'Task'}`,
-      duration: 2000,
-    });
+    pushToast({
+      title: mode === "ceo" ? "Focus Mode: Go" : "Focus Mode",
+      message: mode === "ceo" ? "Maintain radio silence. Execute." : "Session started. Good luck!",
+      tone: "info",
+    }, 3000);
+    setTab("overview");
   };
 
   const handleCompleteTask = (taskId: string) => {
@@ -96,11 +109,11 @@ const Index = () => {
     endFocusSession(taskId, true);
     
     // Show completion feedback
-    toast({
-      title: isCeoMode ? "Mission Accomplished" : "Task Completed",
-      description: `${task?.title || 'Task'} has been marked as complete. Great work!`,
-      duration: 3000,
-    });
+    pushToast({
+      title: mode === "ceo" ? "Mission Complete" : "Nice Work",
+      message: mode === "ceo" ? "Well executed." : "Task completed — celebrate!",
+      tone: "celebrate",
+    }, 4000);
   };
 
   const handleAbandonTask = () => {
@@ -265,6 +278,20 @@ const Index = () => {
           onClose={() => setShowChat(false)}
         />
       )}
+
+      {/* toast container */}
+      <div className="toast-container">
+        {toasts.map(t => (
+          <div key={t.id} className="rounded-lg px-4 py-2 bg-foreground/95 text-primary-foreground shadow-elite-strong animate-floatUp">
+            <div className="flex items-start gap-3">
+              <div>
+                <div className="text-sm font-semibold">{t.title}</div>
+                {t.message && <div className="text-xs text-primary-foreground/90">{t.message}</div>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

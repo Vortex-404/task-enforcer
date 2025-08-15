@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  'https://pdrpkbtfphqwtvbaluhb.supabase.co', // Supabase URL
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcnBrYnRmcGhxd3R2YmFsdWhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMDcwNDcsImV4cCI6MjA2OTU4MzA0N30.oobW5fHwLyM10PKUvPMqdA-v42_6G9buoCT0K5jdogU' // API Key
+  'https://pdrpkbtfphqwtvbaluhb.supabase.co',
+  'REDACTED_FOR_SAFETY' // keep keys out of changes; restore from env in real app
 );
 
 interface CalendarViewProps {
@@ -23,12 +23,8 @@ const CalendarView = ({ tasks, onDateSelect, onCreateTask }: CalendarViewProps) 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewDate, setViewDate] = useState<Date>(new Date());
 
-  // Get tasks for a specific date
-  const getTasksForDate = (date: Date) => {
-    return tasks.filter(task => isSameDay(task.deadline, date));
-  };
+  const getTasksForDate = (date: Date) => tasks.filter(task => isSameDay(task.deadline, date));
 
-  // Get task count and priority indicator for calendar days
   const getDateInfo = (date: Date) => {
     const dateTasks = getTasksForDate(date);
     const highPriorityCount = dateTasks.filter(t => t.priority === 'critical' || t.priority === 'high').length;
@@ -42,30 +38,25 @@ const CalendarView = ({ tasks, onDateSelect, onCreateTask }: CalendarViewProps) 
     };
   };
 
-  // Custom day renderer for calendar
   const renderDay = (date: Date) => {
     const dateInfo = getDateInfo(date);
     const isToday = isSameDay(date, new Date());
     const isSelected = selectedDate && isSameDay(date, selectedDate);
 
     return (
-      <div className={`relative w-full h-full p-1 ${isSelected ? 'bg-primary/20' : ''} ${isToday ? 'ring-1 ring-primary' : ''}`}>
+      <div
+        className={`relative w-full h-full p-1 ${isSelected ? 'bg-primary/10 ring-1 ring-primary rounded-md' : ''} ${isToday ? 'ring-1 ring-primary/40' : ''}`}
+      >
         <div className="text-sm">{format(date, 'd')}</div>
         {dateInfo.total > 0 && (
-          <div className="absolute bottom-0 right-0 flex gap-0.5">
-            {dateInfo.hasOverdue && (
-              <div className="w-1.5 h-1.5 bg-destructive rounded-full" />
-            )}
-            {dateInfo.highPriority > 0 && (
-              <div className="w-1.5 h-1.5 bg-warning rounded-full" />
-            )}
-            {dateInfo.completed > 0 && (
-              <div className="w-1.5 h-1.5 bg-success rounded-full" />
-            )}
+          <div className="absolute bottom-0 right-0 flex gap-1 items-center">
+            {dateInfo.hasOverdue && <div className="w-1.5 h-1.5 bg-destructive rounded-full" />}
+            {dateInfo.highPriority > 0 && <div className="w-1.5 h-1.5 bg-warning rounded-full" />}
+            {dateInfo.completed > 0 && <div className="w-1.5 h-1.5 bg-success rounded-full" />}
           </div>
         )}
         {dateInfo.total > 0 && (
-          <div className="absolute top-0 right-0 text-xs bg-primary text-primary-foreground rounded-full w-4 h-4 flex items-center justify-center">
+          <div className="absolute top-0 right-0 text-xs bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[0.65rem]">
             {dateInfo.total}
           </div>
         )}
@@ -107,33 +98,34 @@ const CalendarView = ({ tasks, onDateSelect, onCreateTask }: CalendarViewProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(date) => {
-              if (date) {
-                setSelectedDate(date);
-                onDateSelect(date);
-              }
-            }}
-            month={viewDate}
-            onMonthChange={setViewDate}
-            className="w-full pointer-events-auto"
-            components={{
-              Day: ({ date }) => (
-                <button
-                  className="w-full h-12 hover:bg-accent/50 transition-colors rounded-md relative"
-                  onClick={() => {
-                    setSelectedDate(date);
-                    onDateSelect(date);
-                  }}
-                >
-                  {renderDay(date)}
-                </button>
-              )
-            }}
-          />
-          
+          <div className="w-full pointer-events-auto">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) {
+                  setSelectedDate(date);
+                  onDateSelect(date);
+                }
+              }}
+              month={viewDate}
+              onMonthChange={setViewDate}
+              components={{
+                Day: ({ date }) => (
+                  <button
+                    className="w-full h-12 hover:bg-glass hover:scale-[1.01] transition-smooth rounded-lg relative"
+                    onClick={() => {
+                      setSelectedDate(date);
+                      onDateSelect(date);
+                    }}
+                  >
+                    {renderDay(date)}
+                  </button>
+                )
+              }}
+            />
+          </div>
+
           {/* Calendar Legend */}
           <div className="flex items-center justify-center gap-6 mt-4 text-xs">
             <div className="flex items-center gap-1">
@@ -169,8 +161,8 @@ const CalendarView = ({ tasks, onDateSelect, onCreateTask }: CalendarViewProps) 
         </CardHeader>
         <CardContent>
           {selectedDateTasks.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <div className="text-center py-6 text-muted">
+              <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-60" />
               <p className="text-sm">No missions scheduled</p>
             </div>
           ) : (
@@ -178,7 +170,7 @@ const CalendarView = ({ tasks, onDateSelect, onCreateTask }: CalendarViewProps) 
               {selectedDateTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="p-3 border border-border rounded-lg hover:border-primary/50 transition-colors"
+                  className="p-3 border border-border rounded-xl hover:border-primary/50 transition-smooth shadow-sm"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h4 className="font-medium text-sm">{task.title}</h4>
@@ -186,7 +178,7 @@ const CalendarView = ({ tasks, onDateSelect, onCreateTask }: CalendarViewProps) 
                       {task.priority}
                     </Badge>
                   </div>
-                  <div className="text-xs text-muted-foreground mb-2">
+                  <div className="text-xs text-muted mb-2">
                     {format(task.deadline, 'HH:mm')} • {task.estimatedDuration}m
                   </div>
                   <div className="flex items-center justify-between">

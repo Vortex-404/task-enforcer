@@ -1,29 +1,29 @@
-import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
+import React from "react";
+import clsx from "clsx";
 
-import { cn } from "@/lib/utils"
+export const Tabs = ({ children, className = "" }: React.HTMLAttributes<HTMLDivElement>) => {
+  return <div className={clsx("rounded-xl bg-transparent p-1", className)}>{children}</div>;
+};
 
-const Tabs = TabsPrimitive.Root
+export const TabsList = ({ children, className = "" }: React.HTMLAttributes<HTMLDivElement>) => {
+  return <div className={clsx("flex gap-1", className)}>{children}</div>;
+};
 
-const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex h-12 items-center justify-center rounded-xl bg-muted p-1 text-muted-foreground backdrop-blur-sm",
-      className
-    )}
-    {...props}
-  />
-))
-TabsList.displayName = TabsPrimitive.List.displayName
-
-const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
+export const Tab = ({ children, active = false, className = "", ...props }: any) => {
+  return (
+    <button
+      {...props}
+      className={clsx(
+        "px-3 py-2 rounded-lg text-sm font-medium",
+        active
+          ? "bg-primary text-primary-foreground shadow-elite hover:scale-[1.01]"
+          : "text-muted hover:bg-glass"
+      , className)}
+    >
+      {children}
+    </button>
+  );
+};
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
@@ -32,7 +32,6 @@ const TabsTrigger = React.forwardRef<
     )}
     {...props}
   />
-))
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 
 const TabsContent = React.forwardRef<
